@@ -7,5 +7,4 @@ export default defineConfig({
   integrations: [tailwind()],
 
   site: "https://conferences.uxdx.com",
-  base: "/astro",
 });
