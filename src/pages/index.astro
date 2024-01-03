@@ -1,38 +1,16 @@
 ---
-const year = "2024";
-const category = "Product";
+import { year, category } from "../services/comparisonData";
 
 import Layout from "../layouts/Layout.astro";
-import { marked } from "marked";
-import { Image } from "astro:assets";
+import Header from "../components/Header.astro";
+import Tabs from "../components/Tabs.astro";
+import Listing from "../components/Listing.astro";
+import getData from "../services/getData";
 
-import logo from "../images/logo.svg";
-
-const AIRTABLE_API_KEY =
-  "pat1WsEFcV61AkBWz.9f43096e14e3e7b30c0fff36d7f15fb137140fe6962341d6bda5d856800a5161";
-const BASE_ID = "appD2aCqhx78eRjWU"; // Replace with your base ID
-const TABLE_NAME = "Table%201"; // Replace with your table name
 const query =
   "AND({Year} = '" + year + "', FIND('" + category + "', {Category}))";
 const encodedQuery = encodeURIComponent(query);
-
-let url = `https://api.airtable.com/v0/${BASE_ID}/${TABLE_NAME}?filterByFormula=${encodedQuery}`;
-const options = {
-  method: "GET",
-  headers: {
-    Authorization: `Bearer ${AIRTABLE_API_KEY}`,
-    "Content-Type": "application/json",
-  },
-};
-const res = await fetch(url, options);
-const data = await res.json();
-const sortedData = data.records.sort((a, b) => {
-  return new Date(a.fields["Start Date"]) - new Date(b.fields["Start Date"]);
-});
-const selectedRegion = Astro.url.searchParams.get("region");
-const filteredData = selectedRegion
-  ? sortedData.filter((post) => post.fields.Region.includes(selectedRegion))
-  : sortedData;
+const sortedData = await getData(encodedQuery);
 
 const title = "The best " + category + " conferences for " + year;
 const description =
@@ -48,66 +26,7 @@ const regions = sortedData
 ---
 
 <Layout title={title} description={description}>
-  <nav class="bg-white shadow">
-    <div class="mx-auto max-w-7xl px-2 sm:px-6 lg:px-8">
-      <div class="relative flex h-16 justify-between">
-        <div
-          class="flex flex-1 items-center justify-center sm:items-stretch sm:justify-start"
-        >
-          <div class="flex flex-shrink-0 items-center">
-            <img
-              class="h-6 w-auto"
-              src="/logo.svg"
-              alt="Conference Comparisons"
-            />
-          </div>
-          <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
-            <!-- Current: "border-indigo-500 text-gray-900", Default: "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700" -->
-            {
-              category !== "Product" && (
-                <a
-                  href={`https://productconferences${year}.com`}
-                  class="inline-flex items-center border-b-2 border-indigo-500 px-1 pt-1 text-sm font-medium text-gray-900"
-                >
-                  Product Conferences
-                </a>
-              )
-            }
-            {
-              category !== "UX" && (
-                <a
-                  href={`https://uxconferences${year}.com`}
-                  class="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
-                >
-                  UX Conference
-                </a>
-              )
-            }
-            {
-              category !== "Design" && (
-                <a
-                  href={`https://designconferences${year}.com`}
-                  class="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
-                >
-                  Design Conferences
-                </a>
-              )
-            }
-            {
-              category !== "Agile" && (
-                <a
-                  href={`https://agileconferences${year}.com`}
-                  class="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
-                >
-                  Agile Conferences
-                </a>
-              )
-            }
-          </div>
-        </div>
-      </div>
-    </div>
-  </nav>
+  <Header category={category} year={year} />
 
   <main>
     <div class="bg-white py-24 sm:py-32">
@@ -124,82 +43,8 @@ const regions = sortedData
 
           <!-- TABS -->
           <div class="mt-16 space-y-20 lg:mt-20 lg:space-y-20">
-            <div>
-              <div>
-                <nav
-                  class="grid grid-cols-1 space-y-4 md:flex md:space-x-4 md:space-y-0"
-                  aria-label="Tabs"
-                >
-                  <!-- Current: "bg-gray-100 text-gray-700", Default: "text-gray-500 hover:text-gray-700" -->
-                  <a
-                    href="/"
-                    class={`bg-gray-100 text-gray-700 rounded-md px-3 py-2 text-sm font-medium hover:bg-gray-200 ${
-                      !selectedRegion ? "bg-gray-300" : ""
-                    }`}
-                    aria-current="page">All Regions</a
-                  >
-                  {
-                    regions.map((region) => {
-                      return (
-                        <a
-                          href={`?region=${region}`}
-                          class={`bg-gray-100 text-gray-700 rounded-md px-3 py-2 text-sm font-medium hover:bg-gray-200 ${
-                            selectedRegion === region ? "bg-gray-300" : ""
-                          }`}
-                        >
-                          {region}
-                        </a>
-                      );
-                    })
-                  }
-                </nav>
-              </div>
-            </div>
-
-            {
-              filteredData.sort().map((record) => {
-                return (
-                  <article class="relative isolate flex flex-col gap-8 lg:flex-row">
-                    <div class="relative aspect-[16/9] sm:aspect-[2/1] lg:aspect-square lg:w-64 lg:shrink-0">
-                      <a href={record.fields.Link} target="_blank">
-                        <img
-                          src={record.fields["ImageUrl"]}
-                          alt={record.fields["Conference Name"]}
-                          class="absolute inset-0 h-full w-full rounded-2xl bg-gray-50 object-cover"
-                        />
-                        <div class="absolute inset-0 rounded-2xl ring-1 ring-inset ring-gray-900/10" />
-                      </a>
-                    </div>
-                    <div>
-                      <div class="flex items-center gap-x-4 text-xs">
-                        <time datetime="2020-03-16" class="text-gray-500">
-                          {record.fields.Dates}
-                        </time>
-                        <span class="relative z-10 rounded-full bg-gray-50 px-3 py-1.5 font-medium text-gray-600 hover:bg-gray-100">
-                          {record.fields.Format}
-                        </span>
-                      </div>
-                      <div class="group relative max-w-xl">
-                        <a href={record.fields.Link} target="_blank">
-                          <h3 class="mt-3 text-lg font-semibold leading-6 text-gray-900 group-hover:text-gray-600">
-                            <span class="absolute inset-0" />
-                            {record.fields["Conference Name"]}
-                          </h3>
-                        </a>
-                        <div
-                          class="mt-5 text-sm leading-6 text-gray-600"
-                          set:html={marked.parse(record.fields.Description)}
-                        />
-                        <div
-                          class="mt-5 text-sm leading-6 text-gray-600"
-                          set:html={marked.parse(record.fields.Price)}
-                        />
-                      </div>
-                    </div>
-                  </article>
-                );
-              })
-            }
+            <Tabs regions={regions} selectedRegion={null} />
+            <Listing data={sortedData} />
           </div>
         </div>
       </div>

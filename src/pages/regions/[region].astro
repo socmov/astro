@@ -1,0 +1,68 @@
+---
+import { year, category } from "../../services/comparisonData";
+
+import Layout from "../../layouts/Layout.astro";
+import Header from "../../components/Header.astro";
+import Tabs from "../../components/Tabs.astro";
+import Listing from "../../components/Listing.astro";
+import getData from "../../services/getData";
+
+const query =
+  "AND({Year} = '" + year + "', FIND('" + category + "', {Category}))";
+const encodedQuery = encodeURIComponent(query);
+const sortedData = await getData(encodedQuery);
+
+const regions = sortedData
+  .map((record) => {
+    return record.fields.Region;
+  })
+  .filter((value, index, self) => {
+    return self.indexOf(value) === index;
+  });
+
+export function getStaticPaths() {
+  return [
+    { params: { region: "North America" } },
+    { params: { region: "Latin America" } },
+    { params: { region: "EMEA" } },
+    { params: { region: "APAC" } },
+  ];
+}
+
+const { region } = Astro.params;
+const selectedRegion = region ? region : null;
+const filteredData = selectedRegion
+  ? sortedData.filter((post) => post.fields.Region.includes(selectedRegion))
+  : sortedData;
+
+const title = "The best " + category + " conferences for " + year;
+const description =
+  "We've collated the best conferences from around the world so you don't have to.";
+---
+
+<Layout title={title} description={description}>
+  <Header category={category} year={year} />
+
+  <main>
+    <div class="bg-white py-24 sm:py-32">
+      <div class="mx-auto max-w-7xl px-6 lg:px-8">
+        <div class="mx-auto max-w-2xl lg:max-w-4xl">
+          <h2
+            class="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl"
+          >
+            {title}
+          </h2>
+          <p class="mt-2 text-lg leading-8 text-gray-600">
+            {description}
+          </p>
+
+          <!-- TABS -->
+          <div class="mt-16 space-y-20 lg:mt-20 lg:space-y-20">
+            <Tabs regions={regions} selectedRegion={selectedRegion} />
+            <Listing data={filteredData} />
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</Layout>
